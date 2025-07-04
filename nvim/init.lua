@@ -100,12 +100,7 @@ require('lazy').setup({
     'hrsh7th/nvim-cmp',
     dependencies = { 'hrsh7th/cmp-nvim-lsp', 'L3MON4D3/LuaSnip', 'saadparwaiz1/cmp_luasnip' },
   },
-  {
-  "folke/tokyonight.nvim",
-  lazy = false,
-  priority = 1000,
-  opts = {},
-  },
+
   -- Useful plugin to show you pending keybinds.
   { 'folke/which-key.nvim', opts = {} },
   { -- Adds git releated signs to the gutter, as well as utilities for managing changes
@@ -121,13 +116,22 @@ require('lazy').setup({
       },
     },
   },
+
+  { -- Theme inspired by Atom
+    'navarasu/onedark.nvim',
+    priority = 1000,
+    config = function()
+      vim.cmd.colorscheme 'onedark'
+    end,
+  },
+
   { -- Set lualine as statusline
     'nvim-lualine/lualine.nvim',
     -- See :help lualine.txt
     opts = {
       options = {
-       icons_enabled = false,
-        theme = 'tokyonight',
+        icons_enabled = false,
+        theme = 'onedark',
         component_separators = '|',
         section_separators = '',
      },
@@ -206,8 +210,54 @@ require('lazy').setup({
   {
     "typicode/bg.nvim", lazy = false
   },
-   {
-    'lervag/vimtex'
+  {
+    "mfussenegger/nvim-jdtls"
+  },
+  {
+    'mfussenegger/nvim-dap'
+  },
+  {
+    'rcarriga/nvim-dap-ui'
+  },
+  {
+    'theHamsta/nvim-dap-virtual-text'
+  },
+  {
+    'simrat39/rust-tools.nvim'
+  },
+  {
+    "ThePrimeagen/refactoring.nvim",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-treesitter/nvim-treesitter",
+    },
+    config = function()
+      require("refactoring").setup()
+    end,
+  },
+  {
+    "folke/tokyonight.nvim",
+    lazy = false,
+    priority = 1000,
+    opts = {},
+  },
+  {
+    "EmranMR/tree-sitter-blade"
+  },
+  {
+    "jwalton512/vim-blade"
+  },
+  {
+    "sbdchd/neoformat"
+  },
+  {
+      'MoaidHathot/dotnet.nvim',
+          cmd = "DotnetUI",
+          opts = {},
+  },
+  {
+    "lervag/vimtex",
+    lazy = false,
   }
 }, {})
 
@@ -270,6 +320,18 @@ vim.keymap.set('n', '<leader>l', '<C-w>l', {silent=true})
 vim.keymap.set('n', '<leader>b', ":lua require'dap'.toggle_breakpoint()<CR>")
 vim.keymap.set('n', '<F5>', ":lua require'dap'.continue()<CR>")
 vim.keymap.set('n', '<F10>', ":lua require'dap'.step_over()<CR>")
+-- Refactor keymaps
+vim.keymap.set("x", "<leader>re", ":Refactor extract ")
+vim.keymap.set("x", "<leader>rf", ":Refactor extract_to_file ")
+
+vim.keymap.set("x", "<leader>rv", ":Refactor extract_var ")
+
+vim.keymap.set({ "n", "x" }, "<leader>ri", ":Refactor inline_var")
+
+vim.keymap.set( "n", "<leader>rI", ":Refactor inline_func")
+
+vim.keymap.set("n", "<leader>rb", ":Refactor extract_block")
+vim.keymap.set("n", "<leader>rbf", ":Refactor extract_block_to_file")
 -- [[ Highlight on yank ]]
 -- See :help vim.highlight.on_yank()
 local highlight_group = vim.api.nvim_create_augroup('YankHighlight', { clear = true })
@@ -293,6 +355,8 @@ require('telescope').setup {
     },
   },
 }
+
+
 
 -- Enable telescope fzf native, if installed
 pcall(require('telescope').load_extension, 'fzf')
@@ -318,7 +382,7 @@ vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { de
 -- See :help nvim-treesitter
 require('nvim-treesitter.configs').setup {
   -- Add languages to be installed here that you want installed for treesitter
-  ensure_installed = { 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'tsx', 'typescript', 'vimdoc', 'vim', 'templ' },
+  ensure_installed = { 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'tsx', 'typescript', 'help', 'vim', 'templ' },
 
   -- Autoinstall languages that are not installed. Defaults to false (but you can change for yourself!)
   auto_install = false,
@@ -380,6 +444,22 @@ require('nvim-treesitter.configs').setup {
   },
 }
 
+local parser_config = require "nvim-treesitter.parsers".get_parser_configs()
+parser_config.blade = {
+  install_info = {
+    url = "https://github.com/EmranMR/tree-sitter-blade",
+    files = {"src/parser.c"},
+    branch = "main",
+  },
+  filetype = "blade"
+}
+
+vim.filetype.add({
+  pattern = {
+    ['.*%.blade%.php'] = 'blade',
+  },
+})
+
 -- Diagnostic keymaps
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = "Go to previous diagnostic message" })
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = "Go to next diagnostic message" })
@@ -438,11 +518,9 @@ end
 --  the settings field of the server config. You must look up that documentation yourself.
 local servers = {
   -- clangd = {},
-  -- gopls = {},
+  gopls = {},
   -- pyright = {},
   -- rust_analyzer = {},
-  tsserver = {},
-
   lua_ls = {
     Lua = {
       workspace = { checkThirdParty = false },
@@ -477,7 +555,7 @@ mason_lspconfig.setup_handlers {
     }
   end,
 }
-
+require('lspconfig').jdtls.setup({})
 -- nvim-cmp setup
 local cmp = require 'cmp'
 local luasnip = require 'luasnip'
@@ -526,34 +604,69 @@ cmp.setup {
 -- set termguicolors to enable highlight groups
 vim.opt.termguicolors = true
 
-function toggle_explorer()
+-- The line beneath this is called modeline. See :help modeline
+function toggle_tree()
   require("nvim-tree.api").tree.toggle({
           path = nil,
           current_window = false,
           find_file = false,
           update_root = false,
-          focus = true,
+          focus = false,
   })
 end
 
 -- vim: ts=2 sts=2 sw=2 et
 --
 -- My Stuff
---
-local nvim_lsp = require('lspconfig')
-nvim_lsp.rust_analyzer.setup({
-capabilities=capabilities,
-on_attach=on_attach,
-settings = {
-    ["rust-analyzer"] = {
-        cargo = {
-            allFeatures = true,
-            },
-        },
-    },
+
+require("rust-tools").setup({
+  tools = {
+    hover_actions = {
+      auto_focus = false,
+    }
+  }
+})
+
+local rt = require("rust-tools")
+
+rt.setup({
+  server = {
+    on_attach = function(_, bufnr)
+      -- Hover actions
+      vim.keymap.set("n", "<C-space>", rt.hover_actions.hover_actions, { buffer = bufnr })
+      -- Code action groups
+      vim.keymap.set("n", "<Leader>a", rt.code_action_group.code_action_group, { buffer = bufnr })
+    end,
+  },
 })
 
 vim.cmd[[colorscheme tokyonight]]
+vim.filetype.add({ extension = { templ = "templ" } })
 
+require('lspconfig').templ.setup{
+  on_attach = on_attach,
+  capabilities = capabilities,
+}
 
-vim.keymap.set('n', '<leader>tf', toggle_explorer, {desc = '[T]oggle [F]iletree', buffer = bufnr})
+require("ibl").setup()
+
+vim.keymap.set("n", "<leader>tf", toggle_tree, {desc = "[T]oggle [F]iletree"})
+
+require('lspconfig').intelephense.setup{
+  on_attach = on_attach,
+  capabilities = capabilities,
+  filetypes = {"php", "blade"}
+}
+
+require('lspconfig').html.setup{
+  on_attach = on_attach,
+  capabilities = capabilities,
+  filetypes = {"php", "blade", "html"}
+}
+
+vim.cmd[[let g:neoformat_try_node_exe = 1]];
+vim.api.nvim_create_autocmd({"BufWritePre"},{
+  pattern = {"*.js", "*.jsx", "*.ts", "*.tsx", "*.css", "*.scss"},
+  command = "Neoformat",
+});
+vim.keymap.set("n", "<leader>dn", ":DotnetUI new_item<CR>", {desc = "[D]otnet [N]ew File"})
